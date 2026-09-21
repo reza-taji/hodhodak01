@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('https://abutorab-pub.ir/hodhodak01/sw.js', { scope: 'https://abutorab-pub.ir/hodhodak01/' })})}
