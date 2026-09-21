@@ -48,7 +48,7 @@ export default function Dashboard() {
         >
           <Box
             component="img"
-            src="/icons/icon.svg"
+            src="./icons/icon.svg"
             alt="هدهدک، راهنمای تو"
             sx={{
               width: { xs: 140, md: 180 },

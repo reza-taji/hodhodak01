@@ -139,7 +139,7 @@ export default function PracticeView() {
               <Box sx={{ position: 'relative', display: 'inline-block' }}>
                 <Box
                   component="img"
-                  src="/icons/icon.svg"
+                  src="./icons/icon.svg"
                   alt="هدهدک خوشحال است"
                   sx={{
                     width: 180,

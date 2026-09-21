@@ -77,7 +77,7 @@ export default function MainLayout() {
         <Toolbar sx={{ gap: 1.5, minHeight: { xs: 72, md: 80 } }}>
           <Box
             component="img"
-            src="/icons/icon.svg"
+            src="./icons/icon.svg"
             alt="هدهدک"
             sx={{ width: 48, height: 48 }}
           />
