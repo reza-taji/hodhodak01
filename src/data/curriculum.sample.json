@@ -1,0 +1,264 @@
+{
+  "$schema": "./curriculum.schema.json",
+  "schemaVersion": "1.0.0",
+  "curriculumId": "iran-grade-1-demo",
+  "contentVersion": "0.1.0",
+  "locale": "fa-IR",
+  "direction": "rtl",
+  "grade": 1,
+  "title": {
+    "fa": "برنامهٔ آموزشی پایهٔ اول هدهدک",
+    "en": "Hodhodak Grade 1 Curriculum"
+  },
+  "description": {
+    "fa": "نمونهٔ ساختاری برای محتوای آفلاین فارسی و ریاضی",
+    "en": "Structural sample for offline Farsi and Math content"
+  },
+  "updatedAt": "2026-09-21T00:00:00+03:30",
+  "subjects": [
+    {
+      "id": "farsi",
+      "title": {
+        "fa": "فارسی",
+        "en": "Farsi"
+      },
+      "description": {
+        "fa": "خواندن، نوشتن و گوش‌دادن",
+        "en": "Reading, writing, and listening"
+      },
+      "order": 1,
+      "icon": "MenuBook",
+      "theme": {
+        "mainColor": "#FF7A00",
+        "contrastColor": "#FFFFFF"
+      },
+      "sourceBooks": [
+        {
+          "id": "farsi-c1041",
+          "fileName": "C1041.pdf",
+          "verificationStatus": "not-inspected"
+        }
+      ],
+      "chapters": [
+        {
+          "id": "farsi-demo-chapter",
+          "title": {
+            "fa": "فصل نمونه",
+            "en": "Sample chapter"
+          },
+          "description": {
+            "fa": "این عنوان نمونه است و از کتاب درسی استخراج نشده است.",
+            "en": "This is placeholder content and was not extracted from the textbook."
+          },
+          "order": 1,
+          "lessons": [
+            {
+              "id": "farsi-demo-letter",
+              "title": {
+                "fa": "تمرین نمونهٔ نشانه",
+                "en": "Sample letter practice"
+              },
+              "shortDescription": {
+                "fa": "یک تمرین نمایشی برای نشان‌دادن ساختار داده",
+                "en": "A demonstration exercise for the data structure"
+              },
+              "order": 1,
+              "status": "draft",
+              "difficulty": "starter",
+              "estimatedMinutes": 8,
+              "learningObjectives": [
+                {
+                  "fa": "تمرین هماهنگی چشم و دست هنگام نوشتن",
+                  "en": "Practice hand-eye coordination while writing"
+                }
+              ],
+              "keywords": ["نوشتن", "نشانه"],
+              "prerequisiteLessonIds": [],
+              "contentBlocks": [
+                {
+                  "id": "farsi-demo-instruction",
+                  "type": "instruction",
+                  "body": {
+                    "fa": "با انگشت یا ماوس روی مسیر نشانه حرکت کن.",
+                    "en": "Trace the symbol using a finger or mouse."
+                  }
+                }
+              ],
+              "exercises": [
+                {
+                  "id": "farsi-demo-trace",
+                  "type": "trace-letter",
+                  "title": {
+                    "fa": "نشانه را بکش",
+                    "en": "Trace the symbol"
+                  },
+                  "instruction": {
+                    "fa": "از نقطهٔ شروع حرکت کن و روی مسیر بمان.",
+                    "en": "Start at the marker and stay on the path."
+                  },
+                  "order": 1,
+                  "difficulty": "starter",
+                  "maxAttempts": null,
+                  "reward": {
+                    "seeds": 1,
+                    "firstTryBonus": 1
+                  },
+                  "feedback": {
+                    "success": {
+                      "fa": "آفرین! یک دانه گرفتی.",
+                      "en": "Great job! You earned a seed."
+                    },
+                    "retry": {
+                      "fa": "خیلی خوب تلاش کردی؛ یک بار دیگر امتحان کن.",
+                      "en": "Good try; have another go."
+                    }
+                  },
+                  "config": {
+                    "grapheme": "ا",
+                    "model": "isolated",
+                    "minimumCoveragePercent": 70
+                  }
+                }
+              ],
+              "assets": [],
+              "accessibility": {
+                "readAloud": true,
+                "requiresAudio": false
+              },
+              "completion": {
+                "minimumExercises": 1,
+                "minimumScorePercent": 70,
+                "seedBonus": 2
+              },
+              "sourceRefs": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "math",
+      "title": {
+        "fa": "ریاضی",
+        "en": "Math"
+      },
+      "description": {
+        "fa": "شمارش، الگوها و حل مسئله",
+        "en": "Counting, patterns, and problem solving"
+      },
+      "order": 2,
+      "icon": "Calculate",
+      "theme": {
+        "mainColor": "#29B6F6",
+        "contrastColor": "#111111"
+      },
+      "sourceBooks": [
+        {
+          "id": "math-c105",
+          "fileName": "C105.pdf",
+          "verificationStatus": "not-inspected"
+        }
+      ],
+      "chapters": [
+        {
+          "id": "math-demo-chapter",
+          "title": {
+            "fa": "فصل نمونه",
+            "en": "Sample chapter"
+          },
+          "description": {
+            "fa": "این عنوان نمونه است و از کتاب درسی استخراج نشده است.",
+            "en": "This is placeholder content and was not extracted from the textbook."
+          },
+          "order": 1,
+          "lessons": [
+            {
+              "id": "math-demo-counting",
+              "title": {
+                "fa": "شمارش نمونه",
+                "en": "Sample counting"
+              },
+              "shortDescription": {
+                "fa": "یک فعالیت نمایشی برای شمارش اشیا",
+                "en": "A demonstration activity for counting objects"
+              },
+              "order": 1,
+              "status": "draft",
+              "difficulty": "starter",
+              "estimatedMinutes": 6,
+              "learningObjectives": [
+                {
+                  "fa": "شمارش یک مجموعهٔ کوچک از اشیا",
+                  "en": "Count a small set of objects"
+                }
+              ],
+              "keywords": ["شمارش", "عدد"],
+              "prerequisiteLessonIds": [],
+              "contentBlocks": [
+                {
+                  "id": "math-demo-instruction",
+                  "type": "instruction",
+                  "body": {
+                    "fa": "دانه‌ها را یکی‌یکی بشمار و پاسخ را انتخاب کن.",
+                    "en": "Count the seeds one by one and choose the answer."
+                  }
+                }
+              ],
+              "exercises": [
+                {
+                  "id": "math-demo-count",
+                  "type": "counting",
+                  "title": {
+                    "fa": "چند دانه می‌بینی؟",
+                    "en": "How many seeds do you see?"
+                  },
+                  "instruction": {
+                    "fa": "دانه‌ها را بشمار و عدد درست را بزن.",
+                    "en": "Count the seeds and tap the correct number."
+                  },
+                  "order": 1,
+                  "difficulty": "starter",
+                  "maxAttempts": null,
+                  "reward": {
+                    "seeds": 1,
+                    "firstTryBonus": 1
+                  },
+                  "feedback": {
+                    "success": {
+                      "fa": "درست شمردی! آفرین.",
+                      "en": "You counted correctly!"
+                    },
+                    "retry": {
+                      "fa": "دانه‌ها را آرام و یکی‌یکی بشمار.",
+                      "en": "Count the seeds slowly, one at a time."
+                    }
+                  },
+                  "config": {
+                    "quantity": 4,
+                    "objectLabel": {
+                      "fa": "دانه",
+                      "en": "seed"
+                    },
+                    "answerMode": "multiple-choice",
+                    "choices": [3, 4, 5]
+                  }
+                }
+              ],
+              "assets": [],
+              "accessibility": {
+                "readAloud": true,
+                "requiresAudio": false
+              },
+              "completion": {
+                "minimumExercises": 1,
+                "minimumScorePercent": 70,
+                "seedBonus": 2
+              },
+              "sourceRefs": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

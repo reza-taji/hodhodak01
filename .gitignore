@@ -1,0 +1,108 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+dev-dist
+
+
+# ==========================================
+# 1. وابستگی‌ها (Dependencies)
+# ==========================================
+node_modules/
+.pnp
+.pnp.js
+
+# ==========================================
+# 2. خروجی بیلد و کامپایل (Production Builds)
+# ==========================================
+dist/
+dist-ssr/
+build/
+*.local
+
+# خروجی‌های موقت سرویس‌ورکر و PWA
+dev-dist/
+sw.js.map
+workbox-*.js
+workbox-*.js.map
+
+# ==========================================
+# 3. لاگ‌ها (Logs)
+# ==========================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# 4. متغیرهای محیطی و کلیدها (Environment Variables)
+# ==========================================
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+*.env.local
+
+# نکته: فایل .env.example را در گیت نگه دارید تا ساختار متغیرها مشخص باشد
+!.env.example
+
+# ==========================================
+# 5. تنظیمات ادیتورها و سیستم‌عامل (IDEs & OS)
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# JetBrains (WebStorm / IntelliJ)
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ==========================================
+# 6. تست و گزارش‌ها (Testing & Coverage)
+# ==========================================
+coverage/
+.nyc_output/
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+
+# ==========================================
+# 7. فایل‌های موقت استخراج داده و کش (Temporary Data/Cache)
+# ==========================================
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.vite/
+
+# در صورت استفاده از اسکریپت‌های پایتون برای پردازش PDFها:
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+

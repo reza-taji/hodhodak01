@@ -1,0 +1,843 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hodhodak.app/schemas/curriculum.schema.json",
+  "title": "Hodhodak Grade 1 Curriculum",
+  "description": "Offline-friendly curriculum data for Hodhodak, including lessons, gamified exercises, accessibility metadata, assets, rewards, and textbook provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "curriculumId",
+    "contentVersion",
+    "locale",
+    "direction",
+    "grade",
+    "subjects"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional editor hint pointing to this schema."
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "curriculumId": {
+      "$ref": "#/$defs/id"
+    },
+    "contentVersion": {
+      "$ref": "#/$defs/semanticVersion"
+    },
+    "locale": {
+      "type": "string",
+      "default": "fa-IR",
+      "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"
+    },
+    "direction": {
+      "const": "rtl"
+    },
+    "grade": {
+      "const": 1
+    },
+    "title": {
+      "$ref": "#/$defs/localizedText"
+    },
+    "description": {
+      "$ref": "#/$defs/localizedText"
+    },
+    "academicYear": {
+      "type": "string",
+      "description": "Optional display value such as ۱۴۰۵–۱۴۰۶."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/subject"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "description": "Stable lowercase ID. Do not derive progress keys from display titles.",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 2,
+      "maxLength": 100
+    },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$"
+    },
+    "localizedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fa"],
+      "properties": {
+        "fa": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "theme", "chapters"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "description": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "icon": {
+          "type": "string"
+        },
+        "theme": {
+          "$ref": "#/$defs/subjectTheme"
+        },
+        "sourceBooks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceBook"
+          }
+        },
+        "chapters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/chapter"
+          }
+        }
+      }
+    },
+    "subjectTheme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mainColor", "contrastColor"],
+      "properties": {
+        "mainColor": {
+          "$ref": "#/$defs/hexColor"
+        },
+        "contrastColor": {
+          "$ref": "#/$defs/hexColor"
+        }
+      }
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "sourceBook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "fileName", "verificationStatus"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "fileName": {
+          "type": "string",
+          "pattern": "^[^/\\\\]+\\.pdf$"
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "edition": {
+          "type": "string"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["not-inspected", "inspected", "verified"]
+        }
+      }
+    },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "lessons"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "description": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unlockRule": {
+          "$ref": "#/$defs/unlockRule"
+        },
+        "lessons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/lesson"
+          }
+        }
+      }
+    },
+    "lesson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "order",
+        "status",
+        "difficulty",
+        "estimatedMinutes",
+        "learningObjectives",
+        "contentBlocks",
+        "exercises",
+        "completion"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "shortDescription": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "review", "published"]
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["starter", "easy", "medium", "challenge"]
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 45
+        },
+        "learningObjectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/localizedText"
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prerequisiteLessonIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "contentBlocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentBlock"
+          }
+        },
+        "exercises": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/exercise"
+          }
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/asset"
+          }
+        },
+        "accessibility": {
+          "$ref": "#/$defs/accessibility"
+        },
+        "completion": {
+          "$ref": "#/$defs/completionRule"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceRef"
+          }
+        }
+      }
+    },
+    "unlockRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredLessonIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "minimumLevel": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "contentBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "body"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "instruction", "example", "story", "vocabulary", "image", "audio"]
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "body": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceRef"
+          }
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "src"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["image", "audio", "animation", "font", "data"]
+        },
+        "src": {
+          "type": "string",
+          "description": "Bundled public path or cacheable URL. Prefer local paths for offline use."
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "alt": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "transcript": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "precache": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "readAloud": {
+          "type": "boolean",
+          "default": false
+        },
+        "requiresAudio": {
+          "type": "boolean",
+          "default": false
+        },
+        "audioAlternative": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "motorAlternativeExerciseId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "completionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumExercises", "minimumScorePercent", "seedBonus"],
+      "properties": {
+        "minimumExercises": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimumScorePercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "seedBonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seeds"],
+      "properties": {
+        "seeds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "firstTryBonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["success", "retry"],
+      "properties": {
+        "success": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "retry": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "successAudioAssetId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title", "instruction", "order", "reward", "feedback", "config"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "trace-letter",
+            "multiple-choice",
+            "matching",
+            "ordering",
+            "drag-and-drop",
+            "audio-listening",
+            "fill-blank",
+            "true-false",
+            "counting"
+          ]
+        },
+        "title": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "instruction": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["starter", "easy", "medium", "challenge"]
+        },
+        "maxAttempts": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "reward": {
+          "$ref": "#/$defs/reward"
+        },
+        "feedback": {
+          "$ref": "#/$defs/feedback"
+        },
+        "config": {
+          "type": "object"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceRef"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "trace-letter" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/traceLetterConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "multiple-choice" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/multipleChoiceConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "matching" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/matchingConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "ordering" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/orderingConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "drag-and-drop" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/dragDropConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "audio-listening" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/audioListeningConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "fill-blank" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/fillBlankConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "true-false" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/trueFalseConfig" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "counting" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": { "config": { "$ref": "#/$defs/countingConfig" } }
+          }
+        }
+      ]
+    },
+    "choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "traceLetterConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grapheme", "model", "minimumCoveragePercent"],
+      "properties": {
+        "grapheme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4
+        },
+        "model": {
+          "type": "string",
+          "enum": ["isolated", "initial", "medial", "final", "digit", "shape"]
+        },
+        "guideAssetId": {
+          "$ref": "#/$defs/id"
+        },
+        "minimumCoveragePercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "multipleChoiceConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt", "choices", "correctChoiceIds"],
+      "properties": {
+        "prompt": {
+          "$ref": "#/$defs/localizedText"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/choice"
+          }
+        },
+        "correctChoiceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "shuffleChoices": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "matchingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pairs"],
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "left", "right"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "left": { "$ref": "#/$defs/localizedText" },
+              "right": { "$ref": "#/$defs/localizedText" },
+              "leftAssetId": { "$ref": "#/$defs/id" },
+              "rightAssetId": { "$ref": "#/$defs/id" }
+            }
+          }
+        }
+      }
+    },
+    "orderingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "correctOrder"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/choice" }
+        },
+        "correctOrder": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "dragDropConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "targets", "answers"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/choice" }
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/choice" }
+        },
+        "answers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["itemId", "targetId"],
+            "properties": {
+              "itemId": { "$ref": "#/$defs/id" },
+              "targetId": { "$ref": "#/$defs/id" }
+            }
+          }
+        }
+      }
+    },
+    "audioListeningConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audioAssetId", "prompt", "choices", "correctChoiceIds"],
+      "properties": {
+        "audioAssetId": { "$ref": "#/$defs/id" },
+        "prompt": { "$ref": "#/$defs/localizedText" },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/choice" }
+        },
+        "correctChoiceIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "maxReplays": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      }
+    },
+    "fillBlankConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "acceptedAnswers"],
+      "properties": {
+        "template": { "$ref": "#/$defs/localizedText" },
+        "acceptedAnswers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "letterBank": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "trueFalseConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "correctAnswer"],
+      "properties": {
+        "statement": { "$ref": "#/$defs/localizedText" },
+        "correctAnswer": { "type": "boolean" }
+      }
+    },
+    "countingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quantity", "objectLabel", "answerMode"],
+      "properties": {
+        "quantity": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "objectLabel": { "$ref": "#/$defs/localizedText" },
+        "objectAssetId": { "$ref": "#/$defs/id" },
+        "answerMode": { "type": "string", "enum": ["number-pad", "multiple-choice", "drag-items"] },
+        "choices": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 100 }
+        }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceBookId", "pages", "contentMode", "verificationStatus"],
+      "properties": {
+        "sourceBookId": {
+          "$ref": "#/$defs/id"
+        },
+        "pages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "pdfPageIndexes": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "Optional zero-based PDF indexes when printed page numbers differ.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "contentMode": {
+          "type": "string",
+          "enum": ["paraphrase", "short-quote", "metadata-only", "original-adaptation"]
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["unverified", "needs-review", "verified"]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
