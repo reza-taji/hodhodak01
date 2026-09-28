@@ -108,11 +108,33 @@ const compressCanvas = async (
       ? ['image/webp', 'image/jpeg']
       : ['image/jpeg', 'image/webp'];
 
-  for (const mimeType of mimeTypes) {
-    for (let quality = initialQuality; quality >= MIN_QUALITY; quality -= QUALITY_STEP) {
-      const blob = await canvasToBlob(canvas, mimeType, Number(quality.toFixed(2)));
-      if (blob.type !== mimeType) break;
-      if (estimatedDataUrlBytes(blob) <= maxBytes) return blobToDataUrl(blob);
+  for (const sampleSize of [OUTPUT_SIZE, 224, 192, 160, 128, 96, 64]) {
+    const output = document.createElement('canvas');
+    output.width = OUTPUT_SIZE;
+    output.height = OUTPUT_SIZE;
+    const outputContext = output.getContext('2d');
+    if (!outputContext) throw new ImageCompressionError('Canvas در این مرورگر در دسترس نیست.');
+
+    if (sampleSize === OUTPUT_SIZE) {
+      outputContext.drawImage(canvas, 0, 0);
+    } else {
+      const reduced = document.createElement('canvas');
+      reduced.width = sampleSize;
+      reduced.height = sampleSize;
+      const reducedContext = reduced.getContext('2d');
+      if (!reducedContext) throw new ImageCompressionError('Canvas در این مرورگر در دسترس نیست.');
+      reducedContext.imageSmoothingQuality = 'high';
+      reducedContext.drawImage(canvas, 0, 0, sampleSize, sampleSize);
+      outputContext.imageSmoothingQuality = 'high';
+      outputContext.drawImage(reduced, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    }
+
+    for (const mimeType of mimeTypes) {
+      for (let quality = initialQuality; quality >= MIN_QUALITY - 0.001; quality -= QUALITY_STEP) {
+        const blob = await canvasToBlob(output, mimeType, Number(quality.toFixed(2)));
+        if (blob.type !== mimeType) break;
+        if (estimatedDataUrlBytes(blob) < maxBytes) return blobToDataUrl(blob);
+      }
     }
   }
 

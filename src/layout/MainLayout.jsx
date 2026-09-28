@@ -16,11 +16,14 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 
 import useHodhodakStore from '../store/useHodhodakStore.ts';
 import Dashboard from '../views/Dashboard.jsx';
 import PracticeView from '../views/PracticeView.jsx';
 import BackupManager from '../components/BackupManager.tsx';
+import QuickSwitcherBar from '../components/QuickSwitcherBar.tsx';
+import ClassManagementView from '../views/ClassManagementView.tsx';
 
 /** Compact rail width for 1024×768 — leaves ~920px for content. */
 const RAIL_WIDTH = 96;
@@ -30,6 +33,7 @@ const BOTTOM_NAV_HEIGHT = 80;
 const NAV_ITEMS = [
   { key: 'home', label: 'خانه', icon: <HomeRoundedIcon /> },
   { key: 'lessons', label: 'درس‌ها', icon: <MenuBookRoundedIcon /> },
+  { key: 'classrooms', label: 'کلاس‌ها', icon: <GroupsRoundedIcon /> },
   { key: 'rewards', label: 'جایزه‌ها', icon: <EmojiEventsRoundedIcon /> },
   { key: 'settings', label: 'تنظیمات', icon: <SettingsRoundedIcon /> },
 ];
@@ -117,6 +121,7 @@ export default function MainLayout() {
             )}
           </IconButton>
         </Toolbar>
+        <QuickSwitcherBar />
       </AppBar>
 
       {/* ---------- Navigation: rail on ≥900px, bottom bar below ---------- */}
@@ -168,7 +173,7 @@ export default function MainLayout() {
               border: 'none',
               borderInlineEnd: '3px solid',
               borderColor: 'divider',
-              pt: '96px', // clear the app bar
+              pt: '168px',
             },
           }}
         >
@@ -212,9 +217,9 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          pt: { xs: '84px', md: '92px' }, // clear fixed app bar
+          pt: { xs: '160px', md: '168px' },
           pb: isSmallScreen ? `${BOTTOM_NAV_HEIGHT + 16}px` : 4,
-          px: { xs: 2, md: 4 },
+          px: { xs: 2, md: 2.5 },
           maxWidth: 1100,
           mx: 'auto',
           width: '100%',
@@ -222,6 +227,7 @@ export default function MainLayout() {
       >
         {view === 'home' && <Dashboard />}
         {view === 'lessons' && <PracticeView />}
+        {view === 'classrooms' && <ClassManagementView />}
         {view === 'rewards' && <PlaceholderView title="جایزه‌ها" />}
         {view === 'settings' && <BackupManager />}
       </Box>

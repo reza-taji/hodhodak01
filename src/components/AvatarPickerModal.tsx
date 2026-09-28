@@ -2,7 +2,6 @@ import {
   type ChangeEvent,
   type DragEvent,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -29,6 +28,7 @@ import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 
 import compressImage, { ImageCompressionError } from '../utils/compressImage';
+import { PRESET_AVATARS, resolveAvatar } from './avatars';
 
 export interface AvatarPickerModalProps {
   open: boolean;
@@ -37,29 +37,7 @@ export interface AvatarPickerModalProps {
   onSave: (avatarBase64OrKey: string) => void;
 }
 
-interface PresetAvatar {
-  key: string;
-  emoji: string;
-  label: string;
-  background: string;
-}
-
 const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
-
-const PRESET_AVATARS: PresetAvatar[] = [
-  { key: 'preset:hoopoe', emoji: '🐦', label: 'هدهد', background: '#FFE0B2' },
-  { key: 'preset:lion', emoji: '🦁', label: 'شیر', background: '#FFF3BF' },
-  { key: 'preset:fox', emoji: '🦊', label: 'روباه', background: '#FFD8A8' },
-  { key: 'preset:panda', emoji: '🐼', label: 'پاندا', background: '#F1F3F5' },
-  { key: 'preset:rabbit', emoji: '🐰', label: 'خرگوش', background: '#F3D9FA' },
-  { key: 'preset:cat', emoji: '🐱', label: 'گربه', background: '#FFE8CC' },
-  { key: 'preset:owl', emoji: '🦉', label: 'جغد', background: '#E7F5FF' },
-  { key: 'preset:butterfly', emoji: '🦋', label: 'پروانه', background: '#D0EBFF' },
-  { key: 'preset:unicorn', emoji: '🦄', label: 'تک‌شاخ', background: '#E5DBFF' },
-  { key: 'preset:star', emoji: '⭐', label: 'ستاره', background: '#FFF9DB' },
-  { key: 'preset:rainbow', emoji: '🌈', label: 'رنگین‌کمان', background: '#E3FAFC' },
-  { key: 'preset:rocket', emoji: '🚀', label: 'موشک', background: '#DEE2E6' },
-];
 
 const getCameraErrorMessage = (error: unknown): string => {
   if (error instanceof DOMException) {
@@ -80,16 +58,6 @@ const getImageErrorMessage = (error: unknown): string =>
   error instanceof ImageCompressionError
     ? error.message
     : 'پردازش تصویر انجام نشد؛ لطفاً تصویر دیگری انتخاب کنید.';
-
-const dataUrlToAvatar = (avatar: string | undefined, presets: Map<string, PresetAvatar>) => {
-  if (!avatar) return { src: undefined, text: '🐦', background: '#FFE0B2' };
-  const preset = presets.get(avatar);
-  if (preset) return { src: undefined, text: preset.emoji, background: preset.background };
-  if (avatar.startsWith('data:image/') || avatar.startsWith('blob:') || avatar.startsWith('/')) {
-    return { src: avatar, text: undefined, background: '#FFF8F0' };
-  }
-  return { src: undefined, text: avatar, background: '#FFE0B2' };
-};
 
 const captureVideoFrame = (video: HTMLVideoElement): Promise<Blob> => {
   if (!video.videoWidth || !video.videoHeight) {
@@ -130,6 +98,8 @@ export default function AvatarPickerModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraRequestRef = useRef(0);
+  const imageRequestRef = useRef(0);
   const [activeTab, setActiveTab] = useState(0);
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar ?? '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -138,28 +108,26 @@ export default function AvatarPickerModal({
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraRetryKey, setCameraRetryKey] = useState(0);
 
-  const presetMap = useMemo(
-    () => new Map(PRESET_AVATARS.map((preset) => [preset.key, preset])),
-    [],
-  );
-  const preview = dataUrlToAvatar(selectedAvatar, presetMap);
+  const preview = resolveAvatar(selectedAvatar);
 
   const stopCamera = () => {
+    cameraRequestRef.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraReady(false);
   };
 
   useEffect(() => {
     if (open) {
       setSelectedAvatar(currentAvatar ?? '');
       setErrorMessage(null);
+      setProcessing(false);
       setActiveTab(0);
     } else {
       stopCamera();
+      imageRequestRef.current += 1;
     }
-  }, [currentAvatar, open]);
+  }, [open]);
 
   useEffect(() => {
     if (!open || activeTab !== 2) {
@@ -168,6 +136,7 @@ export default function AvatarPickerModal({
     }
 
     let cancelled = false;
+    const requestId = ++cameraRequestRef.current;
     const startCamera = async () => {
       setErrorMessage(null);
       setCameraReady(false);
@@ -186,18 +155,20 @@ export default function AvatarPickerModal({
             height: { ideal: 720 },
           },
         });
-        if (cancelled) {
+        if (cancelled || cameraRequestRef.current !== requestId) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setCameraReady(true);
-        }
+        if (!videoRef.current) throw new Error('Video element unavailable');
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (!cancelled && cameraRequestRef.current === requestId) setCameraReady(true);
       } catch (error) {
-        if (!cancelled) setErrorMessage(getCameraErrorMessage(error));
+        if (!cancelled && cameraRequestRef.current === requestId) {
+          stopCamera();
+          setErrorMessage(getCameraErrorMessage(error));
+        }
       }
     };
 
@@ -215,12 +186,14 @@ export default function AvatarPickerModal({
     }
     setProcessing(true);
     setErrorMessage(null);
+    const requestId = ++imageRequestRef.current;
     try {
-      setSelectedAvatar(await compressImage(file));
+      const avatar = await compressImage(file);
+      if (imageRequestRef.current === requestId) setSelectedAvatar(avatar);
     } catch (error) {
-      setErrorMessage(getImageErrorMessage(error));
+      if (imageRequestRef.current === requestId) setErrorMessage(getImageErrorMessage(error));
     } finally {
-      setProcessing(false);
+      if (imageRequestRef.current === requestId) setProcessing(false);
     }
   };
 
@@ -241,24 +214,28 @@ export default function AvatarPickerModal({
     if (!videoRef.current || !cameraReady) return;
     setProcessing(true);
     setErrorMessage(null);
+    const requestId = ++imageRequestRef.current;
     try {
       const frame = await captureVideoFrame(videoRef.current);
-      setSelectedAvatar(await compressImage(frame));
+      const avatar = await compressImage(frame);
+      if (imageRequestRef.current === requestId) setSelectedAvatar(avatar);
     } catch (error) {
-      setErrorMessage(getImageErrorMessage(error));
+      if (imageRequestRef.current === requestId) setErrorMessage(getImageErrorMessage(error));
     } finally {
-      setProcessing(false);
+      if (imageRequestRef.current === requestId) setProcessing(false);
     }
   };
 
   const handleClose = () => {
     stopCamera();
+    imageRequestRef.current += 1;
     onClose();
   };
 
   const handleSave = () => {
     if (!selectedAvatar) return;
     stopCamera();
+    imageRequestRef.current += 1;
     onSave(selectedAvatar);
     onClose();
   };
@@ -277,7 +254,7 @@ export default function AvatarPickerModal({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Avatar
             src={preview.src}
-            sx={{ width: 64, height: 64, bgcolor: preview.background, fontSize: 36 }}
+            sx={{ width: 64, height: 64, bgcolor: preview.bgcolor ?? '#FFE0B2', fontSize: 36 }}
           >
             {preview.text}
           </Avatar>
@@ -319,7 +296,7 @@ export default function AvatarPickerModal({
 
         {activeTab === 0 && (
           <Box
-            role="radiogroup"
+            role="group"
             aria-label="آواتارهای آماده"
             sx={{
               display: 'grid',
@@ -332,8 +309,7 @@ export default function AvatarPickerModal({
               return (
                 <IconButton
                   key={preset.key}
-                  role="radio"
-                  aria-checked={selected}
+                  aria-pressed={selected}
                   aria-label={preset.label}
                   onClick={() => setSelectedAvatar(preset.key)}
                   sx={{
@@ -374,14 +350,20 @@ export default function AvatarPickerModal({
                 event.preventDefault();
                 setDragActive(true);
               }}
-              onDragOver={(event) => event.preventDefault()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               role="button"
               tabIndex={0}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') fileInputRef.current?.click();
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  fileInputRef.current?.click();
+                }
               }}
               sx={{
                 width: '100%',

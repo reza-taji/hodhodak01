@@ -1,17 +1,20 @@
+import { useState } from 'react';
+import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
-import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import LinearProgress from '@mui/material/LinearProgress';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
 
 import useHodhodakStore, {
   selectLevelPercent,
   seedsForNextLevel,
-} from '../store/useHodhodakStore.ts';
+} from '../store/useHodhodakStore.js';
+import AvatarPickerModal from '../components/AvatarPickerModal.tsx';
+import { resolveAvatar } from '../components/avatars.ts';
 
 const SUBJECTS = [
   { key: 'persian', title: 'فارسی', emoji: '📖', color: '#FF8A3D' },
@@ -22,11 +25,25 @@ const SUBJECTS = [
 
 export default function Dashboard() {
   const name = useHodhodakStore((s) => s.profile.name);
+  const avatarId = useHodhodakStore((s) => s.profile.avatarId);
+  const setProfile = useHodhodakStore((s) => s.setProfile);
+  const activeStudentId = useHodhodakStore((s) => s.activeStudentId);
+  const updateStudent = useHodhodakStore((s) => s.updateStudent);
   const level = useHodhodakStore((s) => s.gamification.level);
   const levelProgress = useHodhodakStore((s) => s.gamification.levelProgress);
   const percent = useHodhodakStore(selectLevelPercent);
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const needed = seedsForNextLevel(level);
+  const avatar = resolveAvatar(avatarId);
+
+  const handleSaveAvatar = (avatarBase64OrKey) => {
+    // Keep the student entity and profile in sync — updateStudent mirrors
+    // changes into profile for the active student automatically.
+    const updated = updateStudent(activeStudentId, { avatar: avatarBase64OrKey });
+    if (!updated) setProfile({ avatarId: avatarBase64OrKey });
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -46,17 +63,43 @@ export default function Dashboard() {
             p: { xs: 3, md: 4 },
           }}
         >
-          <Box
-            component="img"
-            src="./icons/icon.svg"
-            alt="هدهدک، راهنمای تو"
-            sx={{
-              width: { xs: 140, md: 180 },
-              height: 'auto',
-              flexShrink: 0,
-              filter: 'drop-shadow(0 6px 0 rgba(0,0,0,0.08))',
-            }}
-          />
+          {/* Student avatar — tap to change */}
+          <Box sx={{ position: 'relative', flexShrink: 0 }}>
+            <Avatar
+              src={avatar.src}
+              alt={name || 'تصویر دانش‌آموز'}
+              onClick={() => setPickerOpen(true)}
+              component="button"
+              aria-label="تغییر تصویر دانش‌آموز"
+              sx={{
+                width: { xs: 140, md: 160 },
+                height: { xs: 140, md: 160 },
+                fontSize: { xs: 80, md: 90 },
+                bgcolor: avatar.bgcolor || '#FFE0B2',
+                border: '4px solid #FF8A3D',
+                cursor: 'pointer',
+              }}
+            >
+              {avatar.text}
+            </Avatar>
+            <Avatar
+              component="button"
+              onClick={() => setPickerOpen(true)}
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: 44,
+                height: 44,
+                bgcolor: 'secondary.main',
+                border: '3px solid #FFF8F0',
+                cursor: 'pointer',
+              }}
+            >
+              <EditRoundedIcon sx={{ fontSize: 24 }} />
+            </Avatar>
+          </Box>
           <Box sx={{ textAlign: { xs: 'center', sm: 'right' }, flexGrow: 1 }}>
             <Typography variant="h3" color="primary" gutterBottom>
               سلام{name ? ` ${name}` : ''}! 👋
@@ -112,33 +155,40 @@ export default function Dashboard() {
       <Typography variant="h4" sx={{ mt: 1 }}>
         چی یاد بگیریم؟
       </Typography>
-      <Grid container spacing={2.5}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2.5 }}>
         {SUBJECTS.map((subject) => (
-          <Grid key={subject.key} size={{ xs: 6, md: 3 }}>
-            <Card sx={{ borderColor: subject.color, borderWidth: 3 }}>
-              <CardActionArea
-                aria-label={`درس ${subject.title}`}
-                sx={{
-                  // whole card is one ≥120px touch target
-                  minHeight: { xs: 140, md: 160 },
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Box sx={{ fontSize: { xs: 56, md: 64 }, lineHeight: 1 }} aria-hidden>
-                    {subject.emoji}
-                  </Box>
-                  <Typography variant="h4" sx={{ mt: 1.5, color: subject.color }}>
-                    {subject.title}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
+          <Card key={subject.key} sx={{ borderColor: subject.color, borderWidth: 3 }}>
+            <Box
+              component={Card}
+              aria-label={`درس ${subject.title}`}
+              onClick={undefined}
+              sx={{
+                minHeight: { xs: 140, md: 160 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Box sx={{ fontSize: { xs: 56, md: 64 }, lineHeight: 1 }} aria-hidden>
+                  {subject.emoji}
+                </Box>
+                <Typography variant="h4" sx={{ mt: 1.5, color: subject.color }}>
+                  {subject.title}
+                </Typography>
+              </CardContent>
+            </Box>
+          </Card>
         ))}
-      </Grid>
+      </Box>
+
+      <AvatarPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        currentAvatar={avatarId}
+        onSave={handleSaveAvatar}
+      />
     </Box>
   );
 }

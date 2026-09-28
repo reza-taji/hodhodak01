@@ -521,7 +521,28 @@ export const useHodhodakStore = create<HodhodakStore>()(
           level: newLevel,
           levelProgress: newProgress,
         };
-        set({ gamification });
+        set((state) => {
+          const studentId = state.activeStudentId;
+          const student = studentId ? state.students[studentId] : undefined;
+          const previousStars = student?.progress.stars;
+          return {
+            gamification,
+            ...(studentId && student && {
+              students: {
+                ...state.students,
+                [studentId]: {
+                  ...student,
+                  progress: {
+                    ...student.progress,
+                    stars: (typeof previousStars === 'number' && Number.isFinite(previousStars)
+                      ? previousStars
+                      : 0) + amount,
+                  },
+                },
+              },
+            }),
+          };
+        });
         return { ...gamification, leveledUp: newLevel > level };
       },
 
