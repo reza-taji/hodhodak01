@@ -7,6 +7,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Snackbar from '@mui/material/Snackbar';
@@ -15,9 +16,11 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import PersonAddRoundedIcon from '@mui/icons-material/PersonAddRounded';
 import PersonRemoveRoundedIcon from '@mui/icons-material/PersonRemoveRounded';
 import AvatarPickerModal from '../components/AvatarPickerModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import BackupManager from '../components/BackupManager';
 import { resolveAvatar } from '../components/avatars';
 import useHodhodakStore from '../store/useHodhodakStore';
@@ -45,11 +48,20 @@ export default function ClassManagementView() {
   const createTeacher = useHodhodakStore((state) => state.createTeacher);
   const assignTeacherToClass = useHodhodakStore((state) => state.assignTeacherToClass);
   const updateTeacher = useHodhodakStore((state) => state.updateTeacher);
+  const deleteTeacher = useHodhodakStore((state) => state.deleteTeacher);
   const createStudent = useHodhodakStore((state) => state.createStudent);
+  const updateStudent = useHodhodakStore((state) => state.updateStudent);
+  const deleteStudent = useHodhodakStore((state) => state.deleteStudent);
+  const updateClassroom = useHodhodakStore((state) => state.updateClassroom);
+  const deleteClassroom = useHodhodakStore((state) => state.deleteClassroom);
   const addStudentToClass = useHodhodakStore((state) => state.addStudentToClass);
   const removeStudentFromClass = useHodhodakStore((state) => state.removeStudentFromClass);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ type: 'classroom' | 'teacher' | 'student'; id: string } | null>(null);
   const [avatarTarget, setAvatarTarget] = useState<AvatarTarget>(null);
   const [newTeacherMode, setNewTeacherMode] = useState(false);
   const [returnToClassDialog, setReturnToClassDialog] = useState(false);
@@ -75,22 +87,57 @@ export default function ClassManagementView() {
   const showError = (message: string) => setNotice({ severity: 'error', message });
   const showSuccess = (message: string) => setNotice({ severity: 'success', message });
 
+  const openClassForm = (id?: string) => {
+    const classroom = id ? classrooms[id] : undefined;
+    setEditingClassId(classroom?.id ?? null);
+    setClassName(classroom?.name ?? '');
+    setAcademicYear(classroom?.academicYear ?? '');
+    setClassTeacherId(classroom?.teacherId ?? teacherList[0]?.id ?? '');
+    setDialogMode('class');
+  };
+
+  const openTeacherForm = (id?: string, returnToClass = false) => {
+    const teacher = id ? teachers[id] : undefined;
+    setEditingTeacherId(teacher?.id ?? null);
+    setNewTeacherMode(true);
+    setReturnToClassDialog(returnToClass);
+    setTeacherName(teacher?.fullName ?? '');
+    setTeacherBio(teacher?.bio ?? '');
+    setTeacherAvatar(teacher?.avatar ?? 'preset:owl');
+    setDialogMode('teacher');
+  };
+
+  const openStudentForm = (id?: string) => {
+    const student = id ? students[id] : undefined;
+    setEditingStudentId(student?.id ?? null);
+    setStudentName(student?.fullName ?? '');
+    setStudentAvatar(student?.avatar ?? 'preset:hoopoe');
+    setDialogMode('student');
+  };
+
   const handleCreateClass = () => {
     if (!className.trim() || !academicYear.trim() || !teachers[classTeacherId]) {
       showError('نام کلاس، سال تحصیلی و آموزگار را وارد کنید.');
       return;
     }
     try {
-      const classroom = createClassroom({
-        name: className.trim(),
-        gradeLevel: 1,
-        academicYear: academicYear.trim(),
-        teacherId: classTeacherId,
-        studentIds: [],
-      });
-      setActiveClass(classroom.id);
+      if (editingClassId) {
+        if (!updateClassroom(editingClassId, { name: className.trim(), academicYear: academicYear.trim(), teacherId: classTeacherId })) {
+          showError('کلاس پیدا نشد یا آموزگار نامعتبر است.');
+          return;
+        }
+      } else {
+        const classroom = createClassroom({
+          name: className.trim(),
+          gradeLevel: 1,
+          academicYear: academicYear.trim(),
+          teacherId: classTeacherId,
+          studentIds: [],
+        });
+        setActiveClass(classroom.id);
+      }
       setDialogMode(null);
-      showSuccess('کلاس تازه ساخته شد.');
+      showSuccess(editingClassId ? 'اطلاعات کلاس ویرایش شد.' : 'کلاس تازه ساخته شد.');
     } catch {
       showError('ساخت کلاس انجام نشد؛ اطلاعات را دوباره بررسی کنید.');
     }
@@ -102,20 +149,25 @@ export default function ClassManagementView() {
       return;
     }
     try {
-      const teacher = createTeacher({
-        fullName: teacherName.trim(),
-        bio: teacherBio.trim(),
-        avatar: teacherAvatar,
-      });
-      if (returnToClassDialog) {
+      if (editingTeacherId) {
+        if (!updateTeacher(editingTeacherId, { fullName: teacherName.trim(), bio: teacherBio.trim(), avatar: teacherAvatar })) {
+          showError('آموزگار پیدا نشد.');
+          return;
+        }
+        setDialogMode(null);
+        showSuccess('اطلاعات آموزگار ویرایش شد.');
+      } else {
+        const teacher = createTeacher({ fullName: teacherName.trim(), bio: teacherBio.trim(), avatar: teacherAvatar });
+        if (returnToClassDialog) {
         setClassTeacherId(teacher.id);
         setReturnToClassDialog(false);
         setDialogMode('class');
         showSuccess('آموزگار ثبت شد. حالا کلاس را بسازید.');
-      } else {
-        if (currentClass) assignTeacherToClass(currentClass.id, teacher.id);
-        setDialogMode(null);
-        showSuccess('آموزگار به کلاس اختصاص یافت.');
+        } else {
+          if (currentClass) assignTeacherToClass(currentClass.id, teacher.id);
+          setDialogMode(null);
+          showSuccess('آموزگار ثبت شد.');
+        }
       }
     } catch {
       showError('ثبت آموزگار انجام نشد.');
@@ -123,24 +175,46 @@ export default function ClassManagementView() {
   };
 
   const handleCreateStudent = () => {
-    if (!currentClass || !studentName.trim()) {
+    if ((!currentClass && !editingStudentId) || !studentName.trim()) {
       showError('نام دانش‌آموز را وارد کنید.');
       return;
     }
     try {
-      const student = createStudent({
-        fullName: studentName.trim(),
-        avatar: studentAvatar,
-        progress: {},
-      });
-      addStudentToClass(currentClass.id, student.id);
-      if (!activeStudentId) setActiveStudent(student.id);
+      if (editingStudentId) {
+        if (!updateStudent(editingStudentId, { fullName: studentName.trim(), avatar: studentAvatar })) {
+          showError('دانش‌آموز پیدا نشد.');
+          return;
+        }
+      } else if (currentClass) {
+        const student = createStudent({ fullName: studentName.trim(), avatar: studentAvatar, progress: {} });
+        addStudentToClass(currentClass.id, student.id);
+        if (!activeStudentId) setActiveStudent(student.id);
+      }
       setDialogMode(null);
-      showSuccess('دانش‌آموز به کلاس اضافه شد.');
+      showSuccess(editingStudentId ? 'اطلاعات دانش‌آموز ویرایش شد.' : 'دانش‌آموز به کلاس اضافه شد.');
     } catch {
       showError('ثبت دانش‌آموز انجام نشد.');
     }
   };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const { type, id } = pendingDelete;
+    const deleted = type === 'teacher' ? deleteTeacher(id) : type === 'classroom' ? deleteClassroom(id) : deleteStudent(id);
+    setPendingDelete(null);
+    if (deleted) showSuccess('اطلاعات انتخاب‌شده حذف شد.');
+    else showError('مورد انتخاب‌شده دیگر وجود ندارد.');
+  };
+
+  const deleteTitle = pendingDelete?.type === 'teacher' ? 'حذف آموزگار؟' : pendingDelete?.type === 'classroom' ? 'حذف کلاس؟' : 'حذف دانش‌آموز؟';
+  const assignedClasses = pendingDelete?.type === 'teacher'
+    ? Object.values(classrooms).filter((classroom) => classroom.teacherId === pendingDelete.id).length
+    : 0;
+  const deleteMessage = pendingDelete?.type === 'teacher'
+    ? `آموزگار «${teachers[pendingDelete.id]?.fullName ?? ''}» حذف می‌شود. ${assignedClasses ? `${assignedClasses.toLocaleString('fa-IR')} کلاس وابسته نیز حذف می‌شود و دانش‌آموزان آن‌ها بدون کلاس می‌مانند.` : ''}`
+    : pendingDelete?.type === 'classroom'
+      ? `کلاس «${classrooms[pendingDelete.id]?.name ?? ''}» حذف می‌شود. دانش‌آموزان حذف نمی‌شوند و بعداً می‌توان آن‌ها را به کلاس دیگری افزود.`
+      : `دانش‌آموز «${pendingDelete ? students[pendingDelete.id]?.fullName ?? '' : ''}» و پیشرفت او حذف می‌شود و از همهٔ کلاس‌ها برداشته خواهد شد.`;
 
   const avatarValue =
     avatarTarget === 'new-teacher'
@@ -169,44 +243,40 @@ export default function ClassManagementView() {
           fullWidth
           variant="contained"
           startIcon={<AddRoundedIcon />}
-          onClick={() => {
-            setClassName('');
-            setAcademicYear('');
-            setClassTeacherId(teacherList[0]?.id ?? '');
-            setDialogMode('class');
-          }}
+          onClick={() => openClassForm()}
           sx={{ minHeight: 54, mb: 1.5, px: 1 }}
         >
           ساخت کلاس
         </Button>
         <Stack spacing={1} sx={{ maxHeight: 'calc(100dvh - 305px)', overflowY: 'auto' }}>
           {classList.map((classroom) => (
-            <Box
-              component="button"
-              type="button"
-              key={classroom.id}
-              onClick={() => setActiveClass(classroom.id)}
-              aria-pressed={activeClassroomId === classroom.id}
-              sx={{
-                width: '100%',
-                minHeight: 66,
-                textAlign: 'right',
-                p: 1.5,
-                borderRadius: 2,
-                border: '2px solid',
-                borderColor: activeClassroomId === classroom.id ? 'primary.main' : 'divider',
-                bgcolor: activeClassroomId === classroom.id ? '#FFF0E2' : 'background.paper',
-                cursor: 'pointer',
-                '&:focus-visible': { outline: '3px solid #1F2933' },
-              }}
-            >
-              <Typography fontWeight={800} noWrap>{classroom.name}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {classroom.studentIds.length.toLocaleString('fa-IR')} دانش‌آموز
-              </Typography>
+            <Box key={classroom.id} sx={{ display: 'flex', alignItems: 'center', border: '2px solid', borderColor: activeClassroomId === classroom.id ? 'primary.main' : 'divider', borderRadius: 2, bgcolor: activeClassroomId === classroom.id ? '#FFF0E2' : 'background.paper' }}>
+              <Box component="button" type="button" onClick={() => setActiveClass(classroom.id)} aria-pressed={activeClassroomId === classroom.id}
+                sx={{ flex: 1, minWidth: 0, minHeight: 64, textAlign: 'right', p: 0.75, border: 0, bgcolor: 'transparent', cursor: 'pointer' }}>
+                <Typography fontWeight={800} noWrap>{classroom.name}</Typography>
+                <Typography variant="caption" color="text.secondary">{classroom.studentIds.length.toLocaleString('fa-IR')} دانش‌آموز</Typography>
+              </Box>
+              <IconButton aria-label={`ویرایش کلاس ${classroom.name}`} onClick={() => openClassForm(classroom.id)} sx={{ width: 44, height: 48 }}>
+                <EditRoundedIcon fontSize="small" />
+              </IconButton>
+              <IconButton color="error" aria-label={`حذف کلاس ${classroom.name}`} onClick={() => setPendingDelete({ type: 'classroom', id: classroom.id })} sx={{ width: 44, height: 48 }}>
+                <DeleteOutlineRoundedIcon fontSize="small" />
+              </IconButton>
             </Box>
           ))}
           {!classList.length && <Typography color="text.secondary">هنوز کلاسی ساخته نشده است.</Typography>}
+        </Stack>
+        <Typography variant="h4" sx={{ px: 1, pt: 2, pb: 1 }}>آموزگاران</Typography>
+        <Button fullWidth variant="outlined" onClick={() => openTeacherForm()} sx={{ minHeight: 48, mb: 1 }}>افزودن آموزگار</Button>
+        <Stack spacing={0.5} sx={{ maxHeight: 168, overflowY: 'auto' }}>
+          {teacherList.map((teacher) => (
+            <Box key={teacher.id} sx={{ display: 'flex', alignItems: 'center', minHeight: 52, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography noWrap fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>{teacher.fullName}</Typography>
+              <IconButton aria-label={`ویرایش آموزگار ${teacher.fullName}`} onClick={() => openTeacherForm(teacher.id)} sx={{ width: 44, height: 48 }}><EditRoundedIcon fontSize="small" /></IconButton>
+              <IconButton color="error" aria-label={`حذف آموزگار ${teacher.fullName}`} onClick={() => setPendingDelete({ type: 'teacher', id: teacher.id })} sx={{ width: 44, height: 48 }}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton>
+            </Box>
+          ))}
+          {!teacherList.length && <Typography color="text.secondary">آموزگاری ثبت نشده است.</Typography>}
         </Stack>
       </Paper>
 
@@ -238,11 +308,9 @@ export default function ClassManagementView() {
                   variant="outlined"
                   startIcon={<EditRoundedIcon />}
                   onClick={() => {
+                    setEditingTeacherId(null);
                     setNewTeacherMode(false);
                     setReturnToClassDialog(false);
-                    setTeacherName('');
-                    setTeacherBio('');
-                    setTeacherAvatar('preset:owl');
                     setDialogMode('teacher');
                   }}
                   sx={{ minHeight: 50, flexShrink: 0, px: 1.5 }}
@@ -258,11 +326,7 @@ export default function ClassManagementView() {
                 <Button
                   variant="contained"
                   startIcon={<PersonAddRoundedIcon />}
-                  onClick={() => {
-                    setStudentName('');
-                    setStudentAvatar('preset:hoopoe');
-                    setDialogMode('student');
-                  }}
+                  onClick={() => openStudentForm()}
                   sx={{ minHeight: 50, px: 1.5 }}
                 >
                   افزودن
@@ -288,13 +352,23 @@ export default function ClassManagementView() {
                           {student.fullName}
                         </Typography>
                       </Button>
-                      <Button
+                      <IconButton
+                        aria-label={`ویرایش دانش‌آموز ${student.fullName}`}
+                        onClick={() => openStudentForm(student.id)}
+                        sx={{ width: 46, height: 48, flexShrink: 0 }}
+                      >
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
                         aria-label={`برداشتن ${student.fullName} از کلاس`}
                         onClick={() => setPendingRemovalId(id)}
-                        sx={{ minWidth: 46, width: 46, height: 46, p: 0 }}
+                        sx={{ width: 46, height: 48, flexShrink: 0 }}
                       >
                         <PersonRemoveRoundedIcon />
-                      </Button>
+                      </IconButton>
+                      <IconButton color="error" aria-label={`حذف دانش‌آموز ${student.fullName}`} onClick={() => setPendingDelete({ type: 'student', id })} sx={{ width: 46, height: 48, flexShrink: 0 }}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   );
                 })}
@@ -308,11 +382,26 @@ export default function ClassManagementView() {
           <Alert severity="info">برای مدیریت دانش‌آموزان یک کلاس را انتخاب یا ایجاد کنید.</Alert>
         )}
 
+        {Object.values(students).some((student) => !Object.values(classrooms).some((classroom) => classroom.studentIds.includes(student.id))) && (
+          <Paper elevation={0} sx={cardStyle}>
+            <Typography variant="h4" sx={{ mb: 1 }}>دانش‌آموزان بدون کلاس</Typography>
+            <Stack spacing={0.5}>
+              {Object.values(students).filter((student) => !Object.values(classrooms).some((classroom) => classroom.studentIds.includes(student.id))).map((student) => (
+                <Box key={student.id} sx={{ display: 'flex', alignItems: 'center', minHeight: 52 }}>
+                  <Typography noWrap sx={{ flex: 1 }}>{student.fullName}</Typography>
+                  <IconButton aria-label={`ویرایش دانش‌آموز ${student.fullName}`} onClick={() => openStudentForm(student.id)} sx={{ width: 48, height: 48 }}><EditRoundedIcon /></IconButton>
+                  <IconButton color="error" aria-label={`حذف دانش‌آموز ${student.fullName}`} onClick={() => setPendingDelete({ type: 'student', id: student.id })} sx={{ width: 48, height: 48 }}><DeleteOutlineRoundedIcon /></IconButton>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+        )}
+
         <BackupManager />
       </Box>
 
       <Dialog open={dialogMode === 'class'} onClose={() => setDialogMode(null)} maxWidth="xs" fullWidth dir="rtl">
-        <DialogTitle>ساخت کلاس پایهٔ اول</DialogTitle>
+        <DialogTitle>{editingClassId ? 'ویرایش کلاس' : 'ساخت کلاس پایهٔ اول'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField autoFocus label="نام کلاس" value={className} onChange={(event) => setClassName(event.target.value)} fullWidth />
@@ -322,14 +411,7 @@ export default function ClassManagementView() {
             </TextField>
             <Button
               variant="outlined"
-              onClick={() => {
-                setReturnToClassDialog(true);
-                setNewTeacherMode(true);
-                setTeacherName('');
-                setTeacherBio('');
-                setTeacherAvatar('preset:owl');
-                setDialogMode('teacher');
-              }}
+              onClick={() => openTeacherForm(undefined, true)}
               sx={{ minHeight: 50 }}
             >
               ثبت آموزگار تازه
@@ -338,12 +420,12 @@ export default function ClassManagementView() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDialogMode(null)} sx={{ minHeight: 48 }}>انصراف</Button>
-          <Button variant="contained" onClick={handleCreateClass} sx={{ minHeight: 48 }}>ساخت کلاس</Button>
+          <Button variant="contained" onClick={handleCreateClass} sx={{ minHeight: 48 }}>{editingClassId ? 'ذخیرهٔ تغییرات' : 'ساخت کلاس'}</Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={dialogMode === 'teacher'} onClose={() => setDialogMode(returnToClassDialog ? 'class' : null)} maxWidth="sm" fullWidth dir="rtl">
-        <DialogTitle>{returnToClassDialog ? 'ثبت آموزگار کلاس تازه' : 'انتخاب آموزگار'}</DialogTitle>
+        <DialogTitle>{editingTeacherId ? 'ویرایش آموزگار' : returnToClassDialog ? 'ثبت آموزگار کلاس تازه' : 'انتخاب آموزگار'}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
             {!returnToClassDialog && !newTeacherMode && teacherList.map((teacher) => {
@@ -373,7 +455,7 @@ export default function ClassManagementView() {
                 </Button>
               </Stack>
             )}
-            {!returnToClassDialog && (
+            {!returnToClassDialog && !editingTeacherId && (
               <Button variant="text" onClick={() => setNewTeacherMode(!newTeacherMode)} sx={{ minHeight: 48 }}>
                 {newTeacherMode ? 'نمایش آموزگاران موجود' : 'ثبت آموزگار تازه'}
               </Button>
@@ -382,37 +464,40 @@ export default function ClassManagementView() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDialogMode(returnToClassDialog ? 'class' : null)} sx={{ minHeight: 48 }}>انصراف</Button>
-          {newTeacherMode && <Button variant="contained" onClick={handleCreateTeacher} sx={{ minHeight: 48 }}>ثبت و اختصاص</Button>}
+          {newTeacherMode && <Button variant="contained" onClick={handleCreateTeacher} sx={{ minHeight: 48 }}>{editingTeacherId ? 'ذخیرهٔ تغییرات' : 'ثبت آموزگار'}</Button>}
         </DialogActions>
       </Dialog>
 
       <Dialog open={dialogMode === 'student'} onClose={() => setDialogMode(null)} maxWidth="sm" fullWidth dir="rtl">
-        <DialogTitle>افزودن دانش‌آموز</DialogTitle>
+        <DialogTitle>{editingStudentId ? 'ویرایش دانش‌آموز' : 'افزودن دانش‌آموز'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography fontWeight={700}>دانش‌آموزان ثبت‌شده</Typography>
-            <Box sx={{ maxHeight: 170, overflowY: 'auto', display: 'grid', gap: 1 }}>
+            {!editingStudentId && <Typography fontWeight={700}>دانش‌آموزان ثبت‌شده</Typography>}
+            {!editingStudentId && <Box sx={{ maxHeight: 170, overflowY: 'auto', display: 'grid', gap: 1 }}>
               {availableStudents.map((student) => {
                 const avatar = resolveAvatar(student.avatar);
                 return (
-                  <Button
-                    key={student.id}
-                    variant="outlined"
-                    onClick={() => {
-                      if (currentClass && addStudentToClass(currentClass.id, student.id)) {
-                        showSuccess(`${student.fullName} به کلاس اضافه شد.`);
-                      }
-                    }}
-                    sx={{ minHeight: 54, gap: 1.5, justifyContent: 'flex-start' }}
-                  >
-                    <Avatar src={avatar.src} sx={{ bgcolor: avatar.bgcolor }}>{avatar.text}</Avatar>
-                    {student.fullName}
-                  </Button>
+                  <Box key={student.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        if (currentClass && addStudentToClass(currentClass.id, student.id)) {
+                          showSuccess(`${student.fullName} به کلاس اضافه شد.`);
+                        }
+                      }}
+                      sx={{ minHeight: 54, gap: 1.5, justifyContent: 'flex-start', flex: 1 }}
+                    >
+                      <Avatar src={avatar.src} sx={{ bgcolor: avatar.bgcolor }}>{avatar.text}</Avatar>
+                      {student.fullName}
+                    </Button>
+                    <IconButton aria-label={`ویرایش دانش‌آموز ${student.fullName}`} onClick={() => openStudentForm(student.id)} sx={{ width: 48, height: 48 }}><EditRoundedIcon /></IconButton>
+                    <IconButton color="error" aria-label={`حذف دانش‌آموز ${student.fullName}`} onClick={() => setPendingDelete({ type: 'student', id: student.id })} sx={{ width: 48, height: 48 }}><DeleteOutlineRoundedIcon /></IconButton>
+                  </Box>
                 );
               })}
               {!availableStudents.length && <Typography color="text.secondary">دانش‌آموز ثبت‌شدهٔ دیگری وجود ندارد.</Typography>}
-            </Box>
-            <Typography fontWeight={800}>یا دانش‌آموز تازه بسازید</Typography>
+            </Box>}
+            {!editingStudentId && <Typography fontWeight={800}>یا دانش‌آموز تازه بسازید</Typography>}
             <TextField label="نام دانش‌آموز" value={studentName} onChange={(event) => setStudentName(event.target.value)} fullWidth />
             <Button variant="outlined" onClick={() => setAvatarTarget('new-student')} sx={{ minHeight: 54, gap: 1 }}>
               <Avatar src={studentAvatarDisplay.src} sx={{ width: 40, height: 40, bgcolor: studentAvatarDisplay.bgcolor }}>
@@ -424,7 +509,7 @@ export default function ClassManagementView() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDialogMode(null)} sx={{ minHeight: 48 }}>بستن</Button>
-          <Button variant="contained" onClick={handleCreateStudent} sx={{ minHeight: 48 }}>ثبت و افزودن</Button>
+          <Button variant="contained" onClick={handleCreateStudent} sx={{ minHeight: 48 }}>{editingStudentId ? 'ذخیرهٔ تغییرات' : 'ثبت و افزودن'}</Button>
         </DialogActions>
       </Dialog>
 
@@ -434,31 +519,21 @@ export default function ClassManagementView() {
         currentAvatar={avatarValue}
         onSave={handleSaveAvatar}
       />
-      <Dialog open={pendingRemovalId !== null} onClose={() => setPendingRemovalId(null)} maxWidth="xs" fullWidth dir="rtl">
-        <DialogTitle>برداشتن از کلاس؟</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {pendingRemovalId ? students[pendingRemovalId]?.fullName : ''} از این کلاس برداشته می‌شود؛ اطلاعات دانش‌آموز حذف نمی‌شود.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setPendingRemovalId(null)} sx={{ minHeight: 48 }}>انصراف</Button>
-          <Button
-            color="error"
-            variant="contained"
-            sx={{ minHeight: 48 }}
-            onClick={() => {
-              if (currentClass && pendingRemovalId) {
-                removeStudentFromClass(currentClass.id, pendingRemovalId);
-                showSuccess('دانش‌آموز از این کلاس برداشته شد.');
-              }
-              setPendingRemovalId(null);
-            }}
-          >
-            برداشتن از کلاس
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={pendingRemovalId !== null}
+        title="برداشتن از کلاس؟"
+        message={`${pendingRemovalId ? students[pendingRemovalId]?.fullName ?? '' : ''} از این کلاس برداشته می‌شود؛ اطلاعات دانش‌آموز حذف نمی‌شود.`}
+        confirmLabel="برداشتن از کلاس"
+        onCancel={() => setPendingRemovalId(null)}
+        onConfirm={() => {
+          if (currentClass && pendingRemovalId) {
+            removeStudentFromClass(currentClass.id, pendingRemovalId);
+            showSuccess('دانش‌آموز از این کلاس برداشته شد.');
+          }
+          setPendingRemovalId(null);
+        }}
+      />
+      <ConfirmDialog open={pendingDelete !== null} title={deleteTitle} message={deleteMessage} onConfirm={confirmDelete} onCancel={() => setPendingDelete(null)} />
       <Snackbar open={Boolean(notice)} autoHideDuration={4000} onClose={() => setNotice(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={notice?.severity ?? 'success'} onClose={() => setNotice(null)} sx={{ minWidth: 280 }}>
           {notice?.message}

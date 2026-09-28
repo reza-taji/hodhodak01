@@ -14,6 +14,9 @@ import Typography from '@mui/material/Typography';
 import BackupRoundedIcon from '@mui/icons-material/BackupRounded';
 import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
+import DeleteForeverRoundedIcon from '@mui/icons-material/DeleteForeverRounded';
+import ConfirmDialog from './ConfirmDialog';
+import useHodhodakStore from '../store/useHodhodakStore';
 
 import {
   applyImportedBackup,
@@ -35,6 +38,8 @@ export default function BackupManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const clearAllData = useHodhodakStore((state) => state.clearAllData);
 
   const handleExport = async () => {
     setBusy(true);
@@ -144,8 +149,41 @@ export default function BackupManager() {
             onChange={handleFileSelected}
             hidden
           />
+          <Box sx={{ borderTop: '2px solid', borderColor: 'error.main', pt: 2 }}>
+            <Typography variant="h5" color="error.main" fontWeight={800}>
+              بخش خطر: بازنشانی برنامه
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+              تمام کلاس‌ها، آموزگاران، دانش‌آموزان و پیشرفت ذخیره‌شده پاک می‌شوند.
+            </Typography>
+            <Button
+              color="error"
+              variant="outlined"
+              size="large"
+              startIcon={<DeleteForeverRoundedIcon />}
+              onClick={() => setResetDialogOpen(true)}
+              sx={{ minHeight: 56, borderRadius: 3 }}
+            >
+              پاک کردن همهٔ داده‌های برنامه
+            </Button>
+          </Box>
         </Stack>
       </Paper>
+
+      <ConfirmDialog
+        open={resetDialogOpen}
+        title="بازنشانی کامل هدهدک؟"
+        message="هشدار: همهٔ داده‌های آفلاین شامل کلاس‌ها، آموزگاران، دانش‌آموزان، پیشرفت درس‌ها و امتیازها برای همیشه از این دستگاه پاک می‌شود. این کار قابل بازگشت نیست، مگر اینکه فایل پشتیبان داشته باشید."
+        confirmLabel="بله، همهٔ داده‌ها پاک شوند"
+        onCancel={() => setResetDialogOpen(false)}
+        onConfirm={() => {
+          clearAllData();
+          setPendingBackup(null);
+          setDialogOpen(false);
+          setResetDialogOpen(false);
+          setNotice({ severity: 'success', message: 'همهٔ داده‌های برنامه پاک شد.' });
+        }}
+      />
 
       <Dialog
         open={dialogOpen}

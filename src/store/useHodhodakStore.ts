@@ -94,61 +94,11 @@ interface StoreActions {
   completeLesson: (seedBonus?: number) => GamificationState & { leveledUp?: boolean };
   resetLesson: () => void;
   resetAll: () => void;
+  clearAllData: () => void;
 }
 
 export type HodhodakStore = AppState & LegacyAppState & StoreActions;
 type PersistedHodhodakState = AppState & LegacyAppState;
-
-const SEED_CREATED_AT = '2026-09-21T00:00:00.000Z';
-
-const seedTeachers: Record<string, Teacher> = {
-  'teacher-mina': {
-    id: 'teacher-mina',
-    fullName: 'مینا احمدی',
-    avatar: '👩‍🏫',
-    bio: 'آموزگار پایهٔ اول با تمرکز بر یادگیری شاد و بازی‌محور',
-    createdAt: SEED_CREATED_AT,
-  },
-};
-
-const seedStudents: Record<string, Student> = {
-  'student-sara': {
-    id: 'student-sara',
-    fullName: 'سارا محمدی',
-    avatar: '👧',
-    birthYear: 1398,
-    progress: {},
-    createdAt: SEED_CREATED_AT,
-  },
-  'student-ali': {
-    id: 'student-ali',
-    fullName: 'علی رضایی',
-    avatar: '👦',
-    birthYear: 1398,
-    progress: {},
-    createdAt: SEED_CREATED_AT,
-  },
-  'student-nika': {
-    id: 'student-nika',
-    fullName: 'نیکا کریمی',
-    avatar: '🧒',
-    birthYear: 1397,
-    progress: {},
-    createdAt: SEED_CREATED_AT,
-  },
-};
-
-const seedClassrooms: Record<string, Classroom> = {
-  'class-grade-1-a': {
-    id: 'class-grade-1-a',
-    name: 'کلاس اول الف',
-    gradeLevel: 1,
-    academicYear: '۱۴۰۵–۱۴۰۶',
-    teacherId: 'teacher-mina',
-    studentIds: ['student-sara', 'student-ali', 'student-nika'],
-    createdAt: SEED_CREATED_AT,
-  },
-};
 
 const initialLesson: LessonState = {
   lessonId: null,
@@ -161,15 +111,15 @@ const initialLesson: LessonState = {
 };
 
 const createInitialState = (): PersistedHodhodakState => ({
-  activeClassroomId: 'class-grade-1-a',
-  activeStudentId: 'student-sara',
-  classrooms: structuredClone(seedClassrooms),
-  teachers: structuredClone(seedTeachers),
-  students: structuredClone(seedStudents),
+  activeClassroomId: null,
+  activeStudentId: null,
+  classrooms: {},
+  teachers: {},
+  students: {},
   profile: {
-    name: seedStudents['student-sara'].fullName,
-    avatarId: seedStudents['student-sara'].avatar,
-    onboarded: true,
+    name: '',
+    avatarId: '',
+    onboarded: false,
   },
   gamification: {
     seeds: 0,
@@ -209,7 +159,29 @@ const getProfileForStudent = (
 ): ProfileState =>
   student
     ? { ...currentProfile, name: student.fullName, avatarId: student.avatar }
-    : currentProfile;
+    : { ...currentProfile, name: '', avatarId: '' };
+
+const selectionForClassrooms = (
+  state: HodhodakStore,
+  classrooms: Record<string, Classroom>,
+) => {
+  const activeClassroomId =
+    state.activeClassroomId && classrooms[state.activeClassroomId]
+      ? state.activeClassroomId
+      : (Object.keys(classrooms)[0] ?? null);
+  const classroom = activeClassroomId ? classrooms[activeClassroomId] : undefined;
+  const activeStudentId = classroom?.studentIds.includes(state.activeStudentId ?? '')
+    ? state.activeStudentId
+    : (classroom?.studentIds[0] ?? null);
+  return {
+    activeClassroomId,
+    activeStudentId,
+    profile: getProfileForStudent(
+      activeStudentId ? state.students[activeStudentId] : undefined,
+      state.profile,
+    ),
+  };
+};
 
 export const seedsForNextLevel = (level: number): number => level * 100;
 
@@ -237,15 +209,14 @@ export const useHodhodakStore = create<HodhodakStore>()(
       },
 
       deleteTeacher: (teacherId) => {
-        const state = get();
-        if (!state.teachers[teacherId]) return false;
-        if (Object.values(state.classrooms).some((classroom) => classroom.teacherId === teacherId)) {
-          return false;
-        }
+        if (!get().teachers[teacherId]) return false;
         set((current) => {
           const teachers = { ...current.teachers };
           delete teachers[teacherId];
-          return { teachers };
+          const classrooms = Object.fromEntries(
+            Object.entries(current.classrooms).filter(([, classroom]) => classroom.teacherId !== teacherId),
+          );
+          return { teachers, classrooms, ...selectionForClassrooms(current, classrooms) };
         });
         return true;
       },
@@ -336,7 +307,7 @@ export const useHodhodakStore = create<HodhodakStore>()(
       updateClassroom: (classroomId, changes) => {
         const state = get();
         if (!state.classrooms[classroomId]) return false;
-        if (changes.teacherId && !state.teachers[changes.teacherId]) return false;
+        if (changes.teacherId !== undefined && !state.teachers[changes.teacherId]) return false;
         if (changes.studentIds?.some((studentId) => !state.students[studentId])) return false;
 
         set((current) => {
@@ -370,11 +341,9 @@ export const useHodhodakStore = create<HodhodakStore>()(
         set((state) => {
           const classrooms = { ...state.classrooms };
           delete classrooms[classroomId];
-          const isActive = state.activeClassroomId === classroomId;
           return {
             classrooms,
-            activeClassroomId: isActive ? null : state.activeClassroomId,
-            activeStudentId: isActive ? null : state.activeStudentId,
+            ...selectionForClassrooms(state, classrooms),
           };
         });
         return true;
@@ -597,7 +566,11 @@ export const useHodhodakStore = create<HodhodakStore>()(
       },
 
       resetLesson: () => set({ lesson: { ...initialLesson } }),
-      resetAll: () => set(createInitialState()),
+      resetAll: () => get().clearAllData(),
+      clearAllData: () => {
+        set(createInitialState());
+        void useHodhodakStore.persist.clearStorage();
+      },
     }),
     {
       name: 'hodhodak-storage',
