@@ -17,6 +17,8 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 
 import useHodhodakStore from '../store/useHodhodakStore.ts';
 import Dashboard from '../views/Dashboard.jsx';
@@ -57,6 +59,7 @@ export default function MainLayout() {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   const [view, setView] = useState('home');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const seeds = useHodhodakStore((s) => s.gamification.seeds);
   const level = useHodhodakStore((s) => s.gamification.level);
@@ -73,17 +76,27 @@ export default function MainLayout() {
         sx={{
           borderBottom: '3px solid',
           borderColor: 'divider',
-          // keep clear of the rail on large screens
-          width: isSmallScreen ? '100%' : `calc(100% - ${RAIL_WIDTH}px)`,
-          mr: isSmallScreen ? 0 : `${RAIL_WIDTH}px`,
+          width: '100%',
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar sx={{ gap: 1.5, minHeight: { xs: 72, md: 80 } }}>
+          {!isSmallScreen && (
+            <IconButton
+              onClick={() => setIsSidebarOpen((open) => !open)}
+              aria-label={isSidebarOpen ? 'بستن منوی کناری' : 'باز کردن منوی کناری'}
+              aria-controls="desktop-navigation"
+              aria-expanded={isSidebarOpen}
+              sx={{ width: 52, height: 52 }}
+            >
+              {isSidebarOpen ? <ChevronRightRoundedIcon /> : <MenuRoundedIcon />}
+            </IconButton>
+          )}
           <Box
             component="img"
             src="./icons/icon.svg"
             alt="هدهدک"
-            sx={{ width: 48, height: 48 }}
+            sx={{ width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 } }}
           />
           <Typography variant="h4" color="primary" sx={{ fontWeight: 800, flexGrow: 1 }}>
             هدهدک
@@ -106,7 +119,7 @@ export default function MainLayout() {
           <Chip
             label={`سطح ${level.toLocaleString('fa-IR')}`}
             color="secondary"
-            sx={{ height: 48, fontSize: '1.05rem', fontWeight: 700, borderRadius: 999 }}
+            sx={{ display: { xs: 'none', sm: 'flex' }, height: 48, fontSize: '1.05rem', fontWeight: 700, borderRadius: 999 }}
           />
 
           <IconButton
@@ -121,10 +134,10 @@ export default function MainLayout() {
             )}
           </IconButton>
         </Toolbar>
-        <QuickSwitcherBar />
+        <QuickSwitcherBar compact={isSmallScreen} />
       </AppBar>
 
-      {/* ---------- Navigation: rail on ≥900px, bottom bar below ---------- */}
+      {/* ---------- Navigation: collapsible rail on ≥900px, bottom bar below ---------- */}
       {isSmallScreen ? (
         <BottomNavigation
           value={view}
@@ -162,22 +175,26 @@ export default function MainLayout() {
         </BottomNavigation>
       ) : (
         <Drawer
-          variant="permanent"
-          anchor="left" /* flips to the right edge automatically in RTL */
+          variant="persistent"
+          anchor="left"
+          open={isSidebarOpen}
           sx={{
-            width: RAIL_WIDTH,
+            width: isSidebarOpen ? RAIL_WIDTH : 0,
             flexShrink: 0,
+            transition: theme.transitions.create('width', {
+              duration: theme.transitions.duration.standard,
+            }),
             '& .MuiDrawer-paper': {
               width: RAIL_WIDTH,
               boxSizing: 'border-box',
               border: 'none',
               borderInlineEnd: '3px solid',
               borderColor: 'divider',
-              pt: '168px',
+              pt: '156px',
             },
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, px: 1 }}>
+          <Box component="nav" id="desktop-navigation" aria-label="منوی اصلی" dir="rtl" sx={{ display: 'flex', flexDirection: 'column', gap: 1, px: 1 }}>
             {NAV_ITEMS.map((item) => {
               const selected = view === item.key;
               return (
@@ -217,12 +234,16 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          pt: { xs: '160px', md: '168px' },
+          pt: { xs: '232px', md: '168px' },
           pb: isSmallScreen ? `${BOTTOM_NAV_HEIGHT + 16}px` : 4,
           px: { xs: 2, md: 2.5 },
           maxWidth: 1100,
           mx: 'auto',
-          width: '100%',
+          minWidth: 0,
+          width: isSmallScreen ? '100%' : `calc(100% - ${isSidebarOpen ? RAIL_WIDTH : 0}px)`,
+          transition: theme.transitions.create('width', {
+            duration: theme.transitions.duration.standard,
+          }),
         }}
       >
         {view === 'home' && <Dashboard />}
