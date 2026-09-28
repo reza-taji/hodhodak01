@@ -1,5 +1,5 @@
 import type { AppState, Classroom, Student, Teacher } from '../types/hodhodak';
-import { useHodhodakStore } from '../store/useHodhodakStore';
+import { getClassroomMembershipConflict, useHodhodakStore } from '../store/useHodhodakStore';
 
 const APP_VERSION = '1.0.0';
 const MAX_BACKUP_SIZE_BYTES = 10 * 1024 * 1024;
@@ -161,6 +161,10 @@ const validateBackupData = (value: unknown): BackupData => {
         fail(`دانش‌آموزی با شناسهٔ «${studentId}» برای کلاس «${classroom.name}» پیدا نشد.`);
       }
     });
+    const conflict = getClassroomMembershipConflict(
+      classrooms, classroom.teacherId, classroom.studentIds, classroom.id,
+    );
+    if (conflict) fail(conflict);
   });
 
   if (activeClassroomId && !classrooms[activeClassroomId]) {
@@ -300,7 +304,7 @@ export const applyImportedBackup = (
   backup: BackupDocument,
   strategy: ImportStrategy,
 ): ImportResult => {
-  const incoming = backup.data;
+  const incoming = validateBackupData(backup.data);
   const current = useHodhodakStore.getState();
 
   if (strategy === 'overwrite') {
@@ -334,6 +338,12 @@ export const applyImportedBackup = (
   const teachers = { ...current.teachers, ...Object.fromEntries(newTeacherEntries) };
   const students = { ...current.students, ...Object.fromEntries(newStudentEntries) };
   const classrooms = { ...current.classrooms, ...Object.fromEntries(newClassroomEntries) };
+  for (const classroom of Object.values(classrooms)) {
+    const conflict = getClassroomMembershipConflict(
+      classrooms, classroom.teacherId, classroom.studentIds, classroom.id,
+    );
+    if (conflict) fail(`ترکیب فایل پشتیبان ممکن نیست: ${conflict}`);
+  }
   const activeClassroomId = current.activeClassroomId ?? incoming.activeClassroomId;
   const activeClassroom = activeClassroomId ? classrooms[activeClassroomId] : undefined;
   const preferredStudentId = current.activeStudentId ?? incoming.activeStudentId;

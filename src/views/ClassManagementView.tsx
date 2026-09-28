@@ -56,6 +56,8 @@ export default function ClassManagementView() {
   const deleteClassroom = useHodhodakStore((state) => state.deleteClassroom);
   const addStudentToClass = useHodhodakStore((state) => state.addStudentToClass);
   const removeStudentFromClass = useHodhodakStore((state) => state.removeStudentFromClass);
+  const getAvailableStudents = useHodhodakStore((state) => state.getAvailableStudents);
+  const getAvailableTeachers = useHodhodakStore((state) => state.getAvailableTeachers);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
@@ -80,9 +82,10 @@ export default function ClassManagementView() {
   const currentTeacher = currentClass ? teachers[currentClass.teacherId] : undefined;
   const classList = Object.values(classrooms);
   const teacherList = Object.values(teachers);
-  const availableStudents = Object.values(students).filter(
-    (student) => !currentClass?.studentIds.includes(student.id),
-  );
+  const availableStudents = getAvailableStudents();
+  const availableTeachers = getAvailableTeachers(editingClassId ?? undefined);
+  const assignableTeachers = getAvailableTeachers(currentClass?.id);
+  const assignmentError = 'این آموزگار یا دانش‌آموز قبلاً به کلاس دیگری اختصاص یافته است.';
 
   const showError = (message: string) => setNotice({ severity: 'error', message });
   const showSuccess = (message: string) => setNotice({ severity: 'success', message });
@@ -92,7 +95,7 @@ export default function ClassManagementView() {
     setEditingClassId(classroom?.id ?? null);
     setClassName(classroom?.name ?? '');
     setAcademicYear(classroom?.academicYear ?? '');
-    setClassTeacherId(classroom?.teacherId ?? teacherList[0]?.id ?? '');
+    setClassTeacherId(classroom?.teacherId ?? getAvailableTeachers()[0]?.id ?? '');
     setDialogMode('class');
   };
 
@@ -123,7 +126,7 @@ export default function ClassManagementView() {
     try {
       if (editingClassId) {
         if (!updateClassroom(editingClassId, { name: className.trim(), academicYear: academicYear.trim(), teacherId: classTeacherId })) {
-          showError('کلاس پیدا نشد یا آموزگار نامعتبر است.');
+          showError(assignmentError);
           return;
         }
       } else {
@@ -138,8 +141,8 @@ export default function ClassManagementView() {
       }
       setDialogMode(null);
       showSuccess(editingClassId ? 'اطلاعات کلاس ویرایش شد.' : 'کلاس تازه ساخته شد.');
-    } catch {
-      showError('ساخت کلاس انجام نشد؛ اطلاعات را دوباره بررسی کنید.');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'ساخت کلاس انجام نشد؛ اطلاعات را دوباره بررسی کنید.');
     }
   };
 
@@ -164,7 +167,10 @@ export default function ClassManagementView() {
         setDialogMode('class');
         showSuccess('آموزگار ثبت شد. حالا کلاس را بسازید.');
         } else {
-          if (currentClass) assignTeacherToClass(currentClass.id, teacher.id);
+          if (currentClass && !assignTeacherToClass(currentClass.id, teacher.id)) {
+            showError(assignmentError);
+            return;
+          }
           setDialogMode(null);
           showSuccess('آموزگار ثبت شد.');
         }
@@ -187,7 +193,10 @@ export default function ClassManagementView() {
         }
       } else if (currentClass) {
         const student = createStudent({ fullName: studentName.trim(), avatar: studentAvatar, progress: {} });
-        addStudentToClass(currentClass.id, student.id);
+        if (!addStudentToClass(currentClass.id, student.id)) {
+          showError(assignmentError);
+          return;
+        }
         if (!activeStudentId) setActiveStudent(student.id);
       }
       setDialogMode(null);
@@ -407,8 +416,9 @@ export default function ClassManagementView() {
             <TextField autoFocus label="نام کلاس" value={className} onChange={(event) => setClassName(event.target.value)} fullWidth />
             <TextField label="سال تحصیلی" value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} fullWidth placeholder="۱۴۰۵–۱۴۰۶" />
             <TextField select label="آموزگار" value={classTeacherId} onChange={(event) => setClassTeacherId(event.target.value)} fullWidth>
-              {teacherList.map((teacher) => <MenuItem key={teacher.id} value={teacher.id}>{teacher.fullName}</MenuItem>)}
+              {availableTeachers.map((teacher) => <MenuItem key={teacher.id} value={teacher.id}>{teacher.fullName}</MenuItem>)}
             </TextField>
+            {!availableTeachers.length && <Typography color="text.secondary">آموزگار آزاد وجود ندارد؛ آموزگار تازه ثبت کنید.</Typography>}
             <Button
               variant="outlined"
               onClick={() => openTeacherForm(undefined, true)}
@@ -428,14 +438,17 @@ export default function ClassManagementView() {
         <DialogTitle>{editingTeacherId ? 'ویرایش آموزگار' : returnToClassDialog ? 'ثبت آموزگار کلاس تازه' : 'انتخاب آموزگار'}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
-            {!returnToClassDialog && !newTeacherMode && teacherList.map((teacher) => {
+            {!returnToClassDialog && !newTeacherMode && assignableTeachers.map((teacher) => {
               const avatar = resolveAvatar(teacher.avatar);
               return (
                 <Button
                   key={teacher.id}
                   variant={currentTeacher?.id === teacher.id ? 'contained' : 'outlined'}
                   onClick={() => {
-                    if (!currentClass || !assignTeacherToClass(currentClass.id, teacher.id)) return;
+                    if (!currentClass || !assignTeacherToClass(currentClass.id, teacher.id)) {
+                      showError(assignmentError);
+                      return;
+                    }
                     setDialogMode(null);
                     showSuccess('آموزگار کلاس تغییر کرد.');
                   }}
@@ -446,6 +459,9 @@ export default function ClassManagementView() {
                 </Button>
               );
             })}
+            {!returnToClassDialog && !newTeacherMode && !assignableTeachers.length && (
+              <Typography color="text.secondary">آموزگار آزاد وجود ندارد؛ آموزگار تازه ثبت کنید.</Typography>
+            )}
             {newTeacherMode && (
               <Stack spacing={2}>
                 <TextField autoFocus label="نام آموزگار" value={teacherName} onChange={(event) => setTeacherName(event.target.value)} fullWidth />
@@ -481,9 +497,11 @@ export default function ClassManagementView() {
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        if (currentClass && addStudentToClass(currentClass.id, student.id)) {
-                          showSuccess(`${student.fullName} به کلاس اضافه شد.`);
+                        if (!currentClass || !addStudentToClass(currentClass.id, student.id)) {
+                          showError(assignmentError);
+                          return;
                         }
+                        showSuccess(`${student.fullName} به کلاس اضافه شد.`);
                       }}
                       sx={{ minHeight: 54, gap: 1.5, justifyContent: 'flex-start', flex: 1 }}
                     >

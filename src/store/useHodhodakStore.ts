@@ -81,6 +81,8 @@ interface StoreActions {
   getActiveTeacher: () => Teacher | undefined;
   getActiveStudent: () => Student | undefined;
   getClassStudents: (classId: string) => Student[];
+  getAvailableTeachers: (exceptClassId?: string) => Teacher[];
+  getAvailableStudents: (exceptClassId?: string) => Student[];
 
   setProfile: (profile: Partial<Pick<ProfileState, 'name' | 'avatarId'>>) => void;
   completeOnboarding: () => void;
@@ -151,6 +153,24 @@ const ensureUniqueId = (collection: Record<string, unknown>, id: string): void =
   if (collection[id]) {
     throw new Error(`An entity with id "${id}" already exists.`);
   }
+};
+
+export const getClassroomMembershipConflict = (
+  classrooms: Record<string, Classroom>,
+  teacherId: string,
+  studentIds: string[],
+  exceptClassId?: string,
+): string | null => {
+  for (const classroom of Object.values(classrooms)) {
+    if (classroom.id === exceptClassId) continue;
+    if (classroom.teacherId === teacherId) {
+      return `این آموزگار قبلاً به کلاس «${classroom.name}» اختصاص یافته است.`;
+    }
+    if (studentIds.some((studentId) => classroom.studentIds.includes(studentId))) {
+      return `این دانش‌آموز قبلاً به کلاس «${classroom.name}» اختصاص یافته است.`;
+    }
+  }
+  return null;
 };
 
 const getProfileForStudent = (
@@ -288,6 +308,10 @@ export const useHodhodakStore = create<HodhodakStore>()(
         if (input.studentIds.some((studentId) => !state.students[studentId])) {
           throw new Error('Every classroom student must exist before assignment.');
         }
+        const conflict = getClassroomMembershipConflict(
+          state.classrooms, input.teacherId, input.studentIds,
+        );
+        if (conflict) throw new Error(conflict);
 
         const classroom = createEntity<Classroom>(
           {
@@ -306,9 +330,16 @@ export const useHodhodakStore = create<HodhodakStore>()(
 
       updateClassroom: (classroomId, changes) => {
         const state = get();
-        if (!state.classrooms[classroomId]) return false;
+        const existing = state.classrooms[classroomId];
+        if (!existing) return false;
         if (changes.teacherId !== undefined && !state.teachers[changes.teacherId]) return false;
         if (changes.studentIds?.some((studentId) => !state.students[studentId])) return false;
+        if (getClassroomMembershipConflict(
+          state.classrooms,
+          changes.teacherId ?? existing.teacherId,
+          changes.studentIds ?? existing.studentIds,
+          classroomId,
+        )) return false;
 
         set((current) => {
           const classroom = {
@@ -352,6 +383,7 @@ export const useHodhodakStore = create<HodhodakStore>()(
       assignTeacherToClass: (classId, teacherId) => {
         const state = get();
         if (!state.classrooms[classId] || !state.teachers[teacherId]) return false;
+        if (getClassroomMembershipConflict(state.classrooms, teacherId, [], classId)) return false;
         set((current) => ({
           classrooms: {
             ...current.classrooms,
@@ -365,6 +397,7 @@ export const useHodhodakStore = create<HodhodakStore>()(
         const state = get();
         const classroom = state.classrooms[classId];
         if (!classroom || !state.students[studentId]) return false;
+        if (getClassroomMembershipConflict(state.classrooms, classroom.teacherId, [studentId], classId)) return false;
         if (classroom.studentIds.includes(studentId)) return true;
         set((current) => ({
           classrooms: {
@@ -468,6 +501,24 @@ export const useHodhodakStore = create<HodhodakStore>()(
         return (state.classrooms[classId]?.studentIds ?? [])
           .map((studentId) => state.students[studentId])
           .filter((student): student is Student => Boolean(student));
+      },
+
+      getAvailableTeachers: (exceptClassId) => {
+        const state = get();
+        return Object.values(state.teachers).filter((teacher) =>
+          !Object.values(state.classrooms).some((classroom) =>
+            classroom.id !== exceptClassId && classroom.teacherId === teacher.id,
+          ),
+        );
+      },
+
+      getAvailableStudents: (exceptClassId) => {
+        const state = get();
+        return Object.values(state.students).filter((student) =>
+          !Object.values(state.classrooms).some((classroom) =>
+            classroom.id !== exceptClassId && classroom.studentIds.includes(student.id),
+          ),
+        );
       },
 
       setProfile: (profile) =>
