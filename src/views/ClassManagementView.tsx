@@ -3,6 +3,7 @@ import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Collapse from '@mui/material/Collapse';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -14,6 +15,8 @@ import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
@@ -37,6 +40,8 @@ const cardStyle = {
 };
 
 export default function ClassManagementView() {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const classrooms = useHodhodakStore((state) => state.classrooms);
   const students = useHodhodakStore((state) => state.students);
   const teachers = useHodhodakStore((state) => state.teachers);
@@ -60,6 +65,7 @@ export default function ClassManagementView() {
   const getAvailableTeachers = useHodhodakStore((state) => state.getAvailableTeachers);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [showManagementLists, setShowManagementLists] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
@@ -243,21 +249,41 @@ export default function ClassManagementView() {
   const studentAvatarDisplay = resolveAvatar(studentAvatar);
 
   return (
-    <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: '232px minmax(0, 1fr)', gap: 2, alignItems: 'start' }}>
-      <Paper component="aside" dir="rtl" elevation={0} sx={{ ...cardStyle, p: 1.5 }}>
-        <Typography variant="h4" sx={{ px: 1, py: 1 }}>
-          کلاس‌ها
-        </Typography>
-        <Button
-          fullWidth
-          variant="contained"
-          startIcon={<AddRoundedIcon />}
-          onClick={() => openClassForm()}
-          sx={{ minHeight: 54, mb: 1.5, px: 1 }}
-        >
-          ساخت کلاس
-        </Button>
-        <Stack spacing={1} sx={{ maxHeight: 'calc(100dvh - 305px)', overflowY: 'auto' }}>
+    <Stack
+      dir="ltr"
+      direction={{ xs: 'column', md: 'row' }}
+      alignItems="flex-start"
+      spacing={2}
+      useFlexGap
+      sx={{ minWidth: 0, width: '100%' }}
+    >
+      <Paper component="aside" dir="rtl" elevation={0} sx={{ ...cardStyle, p: 1.5, width: { xs: '100%', md: 232 }, flexShrink: 0 }}>
+        <Stack direction={{ xs: 'row', md: 'column' }} alignItems={{ xs: 'center', md: 'stretch' }} justifyContent="space-between" spacing={1}>
+          <Typography variant="h4" sx={{ px: 1, py: 1 }}>کلاس‌ها</Typography>
+          <Button
+            fullWidth={!isSmallScreen}
+            variant="contained"
+            startIcon={<AddRoundedIcon />}
+            onClick={() => openClassForm()}
+            sx={{ minHeight: 54, mb: { md: 1.5 }, px: 1, flexShrink: 0 }}
+          >
+            ساخت کلاس
+          </Button>
+        </Stack>
+        {isSmallScreen && (
+          <Button
+            fullWidth
+            variant="text"
+            aria-expanded={showManagementLists}
+            aria-controls="class-management-lists"
+            onClick={() => setShowManagementLists((open) => !open)}
+            sx={{ minHeight: 48 }}
+          >
+            {showManagementLists ? 'بستن فهرست کلاس‌ها و آموزگاران' : 'مدیریت کلاس‌ها و آموزگاران'}
+          </Button>
+        )}
+        <Collapse in={!isSmallScreen || showManagementLists} id="class-management-lists">
+          <Stack spacing={1} sx={{ maxHeight: { xs: 210, md: 'calc(100dvh - 305px)' }, overflowY: 'auto' }}>
           {classList.map((classroom) => (
             <Box key={classroom.id} sx={{ display: 'flex', alignItems: 'center', border: '2px solid', borderColor: activeClassroomId === classroom.id ? 'primary.main' : 'divider', borderRadius: 2, bgcolor: activeClassroomId === classroom.id ? '#FFF0E2' : 'background.paper' }}>
               <Box component="button" type="button" onClick={() => setActiveClass(classroom.id)} aria-pressed={activeClassroomId === classroom.id}
@@ -274,10 +300,10 @@ export default function ClassManagementView() {
             </Box>
           ))}
           {!classList.length && <Typography color="text.secondary">هنوز کلاسی ساخته نشده است.</Typography>}
-        </Stack>
-        <Typography variant="h4" sx={{ px: 1, pt: 2, pb: 1 }}>آموزگاران</Typography>
-        <Button fullWidth variant="outlined" onClick={() => openTeacherForm()} sx={{ minHeight: 48, mb: 1 }}>افزودن آموزگار</Button>
-        <Stack spacing={0.5} sx={{ maxHeight: 168, overflowY: 'auto' }}>
+          </Stack>
+          <Typography variant="h4" sx={{ px: 1, pt: 2, pb: 1 }}>آموزگاران</Typography>
+          <Button fullWidth variant="outlined" onClick={() => openTeacherForm()} sx={{ minHeight: 48, mb: 1 }}>افزودن آموزگار</Button>
+          <Stack spacing={0.5} sx={{ maxHeight: 168, overflowY: 'auto' }}>
           {teacherList.map((teacher) => (
             <Box key={teacher.id} sx={{ display: 'flex', alignItems: 'center', minHeight: 52, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Typography noWrap fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>{teacher.fullName}</Typography>
@@ -286,10 +312,26 @@ export default function ClassManagementView() {
             </Box>
           ))}
           {!teacherList.length && <Typography color="text.secondary">آموزگاری ثبت نشده است.</Typography>}
-        </Stack>
+          </Stack>
+        </Collapse>
       </Paper>
 
-      <Box component="section" dir="rtl" sx={{ minWidth: 0, display: 'grid', gap: 2, maxHeight: 'calc(100dvh - 178px)', overflowY: 'auto', alignContent: 'start', pr: 0.5 }}>
+      <Box
+        component="section"
+        dir="rtl"
+        sx={{
+          minWidth: 0,
+          width: { xs: '100%', md: 'auto' },
+          flex: 1,
+          display: 'grid',
+          gap: 2,
+          maxHeight: { md: 'calc(100dvh - 178px)' },
+          overflowY: 'auto',
+          alignContent: 'start',
+          pr: { md: 0.5 },
+          pb: { xs: 4, md: 0 },
+        }}
+      >
         {currentClass ? (
           <>
             <Paper elevation={0} sx={cardStyle}>
@@ -341,7 +383,7 @@ export default function ClassManagementView() {
                   افزودن
                 </Button>
               </Stack>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
                 {currentClass.studentIds.map((id) => {
                   const student = students[id];
                   if (!student) return null;
@@ -409,7 +451,7 @@ export default function ClassManagementView() {
         <BackupManager />
       </Box>
 
-      <Dialog open={dialogMode === 'class'} onClose={() => setDialogMode(null)} maxWidth="xs" fullWidth dir="rtl">
+      <Dialog open={dialogMode === 'class'} onClose={() => setDialogMode(null)} fullScreen={isSmallScreen} maxWidth="xs" fullWidth dir="rtl">
         <DialogTitle>{editingClassId ? 'ویرایش کلاس' : 'ساخت کلاس پایهٔ اول'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -557,6 +599,6 @@ export default function ClassManagementView() {
           {notice?.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Stack>
   );
 }
